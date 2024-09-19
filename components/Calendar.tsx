@@ -7,6 +7,9 @@ import {
 } from "react-big-calendar";
 import moment from "moment";
 import { useCallback } from "react";
+import 'moment-timezone'; // Import moment-timezone
+// Configure moment to use UTC by default
+moment.tz.setDefault('UTC');
 
 const localizer = momentLocalizer(moment);
 
@@ -30,7 +33,8 @@ export default function Calendar(props: Omit<CalendarProps, "localizer">) {
     []
   );
 
-  return <BigCalendar {...props}
+  return <BigCalendar
+    {...props}
     localizer={localizer}
     eventPropGetter={eventPropGetter}
   />;

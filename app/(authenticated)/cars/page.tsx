@@ -2,6 +2,6 @@ import React from 'react'
 
 export default function page() {
   return (
-    <div>cars, comming soon...</div>
+    <div className="flex justify-center items-center h-screen">กำลังพัฒนา...</div>
   )
 }

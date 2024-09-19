@@ -31,6 +31,8 @@ export default function Page() {
     },
   ]
 
+  // fetch data with React Query
+
   return (
     <>
       {/* Header Section */}
