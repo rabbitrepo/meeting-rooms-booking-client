@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/select";
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
-import { getSession } from '@/lib/AppWrite';
+import { getSession, getUser } from '@/lib/AppWrite';
 import axios from 'axios';
 import { Input } from '@/components/ui/input';
 import { AutosizeTextarea } from '@/components/ui/autoresize-text-area';
@@ -44,21 +44,10 @@ import {
 import { Separator } from '@/components/ui/separator';
 import MiniSearch from 'minisearch'
 import { Button } from '@/components/ui/button';
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
 import Error from '@/components/Error';
-import LoadingPage from '@/components/Loading';
 import Loading from '@/components/Loading';
 import { Spinner } from '@/components/ui/spinner';
+import { LoadingButton } from '@/components/ui/loading-button';
 
 interface Branch {
     id: string;
@@ -79,6 +68,12 @@ interface Event {
     title: string; // The title or description of the event.
 }
 
+interface User {
+    id: string,
+    name: string,
+    email: string,
+    employeeId: string
+}
 
 export default function Page() {
 
@@ -217,7 +212,8 @@ export default function Page() {
             });
 
             const axiosData = response.data;
-            const bookings = axiosData.data.bookings;
+            // const bookings = axiosData.data.bookings;
+            const bookings = axiosData.data.bookings.filter((booking: any) => booking.status === 'confirmed');
 
             // Format bookings
             const formattedBookings = bookings.map((booking: any) => ({
@@ -234,7 +230,6 @@ export default function Page() {
         },
         enabled: !!selectedRoom && !!selectedDate // Ensure all parameters are set
     });
-
     // find update events with fetchedEvents, if event.isNew = true don't touch it 
     useEffect(() => {
         if (fetchedEvents) {
@@ -446,13 +441,13 @@ export default function Page() {
     };
 
     // id = Appwrite User Id (manually created with UUIDV4)
-    // name => nickname = pref.nickname
+    // name => name
     // employeeId = pref.employeeId
     // email = AppWrite email
 
     const participants = [
-        { id: '1', name: 'ฟอร์ด สรจักร HR HQ', employeeId: '1063876', email: 'sorajak.k@dohome.co.th' },
-        { id: '2', name: 'Jane Doe', employeeId: '1063877', email: 'jane.doe@dohome.co.th' },
+        { id: "4617a859-b567-44ee-90e1-f02850f908ca", name: 'Mond', employeeId: '1063877', email: 'contact.jaruphop@gmail.com' },
+        { id: '2', name: 'ฟอร์ด สรจักร HR HQ', employeeId: '1063876', email: 'sorajak.k@dohome.co.th' },
         { id: '3', name: 'John Smith', employeeId: '1063878', email: 'john.smith@dohome.co.th' },
         { id: '4', name: 'Alice Johnson', employeeId: '1063879', email: 'alice.johnson@dohome.co.th' },
         { id: '5', name: 'Bob Williams', employeeId: '1063880', email: 'bob.williams@dohome.co.th' },
@@ -499,6 +494,9 @@ export default function Page() {
         // Add participants to the search index
         index.addAll(participants);
         setSearchIndex(index);
+
+        // Initialize the search results with all participants
+        setSearchResults(participants);
     }, []);
 
     const performSearch = (query: string) => {
@@ -530,23 +528,23 @@ export default function Page() {
     const validation = () => {
         // Validate that all required fields exist
         if (!selectedRoom?.id) {
-            alert("จำเป็นต้องระบุ ID ห้องประชุม");
+            alert(`โปรดเลือก 'ห้องประชุม'`);
             return false;
         }
         if (!selectedDate || isNaN(new Date(selectedDate).getTime())) {
-            alert("วันที่ที่เลือกไม่ถูกต้อง");
+            alert("โปรดเลือก 'วันที่'");
             return false;
         }
         if (!startTime || !endTime) {
-            alert("ต้องระบุเวลาเริ่มต้นและเวลาสิ้นสุด");
+            alert("โปรดเลือก 'เวลา'");
             return false;
         }
         if (!name) {
-            alert("จำเป็นต้องระบุชื่อการประชุม");
+            alert("โปรดระบุ 'วาระการประชุม'");
             return false;
         }
         if (!participants[0]?.id) {
-            alert("จำเป็นต้องระบุ ID ผู้ใช้");
+            alert("โปรดเลือก 'ผู้เข้่าร่วม'");
             return false;
         }
         return true;
@@ -558,8 +556,9 @@ export default function Page() {
         }
     }
 
+    const [submitLoading, setSubmitLoading] = useState(false)
     const onSubmit = () => {
-
+        setSubmitLoading(true)
         validation()
         // Convert time strings to Date objects
         function timeStringToDate(date, timeString) {
@@ -589,20 +588,70 @@ export default function Page() {
             return;
         }
 
-        // Create the data object
-        const data = {
+        const formattedSelectedParticipants = selectedParticipants.map(participant => ({
+            id: participant.id,
+            name: participant.name,
+            email: participant.email,
+            employeeId: participant.employeeId
+        }));
+
+        const allParticipants = [ // update here!
+            {
+                id: participants[0].id,
+                name: participants[0].name,
+                email: participants[0].email,
+                employeeId: participants[0].employeeId
+            },
+            ...formattedSelectedParticipants
+        ];
+
+        const payload = {
             meetingRoomId: selectedRoom?.id,
-            userId: participants[0]?.id,
-            participants: selectedParticipants.map(participant => participant.id), // Ensure you map participants to their IDs
+            user: participants[0], // update here!
+            participants: allParticipants, // update here!
             name,
             details: description || "", // Default to empty string if description is not provided
             startTime: startDate.toISOString(),
             endTime: endDate.toISOString()
         };
 
-        console.log(data);
+        async function createBooking() {
+            console.log("credentials:", credentials);
+            console.log("payload:", payload);
 
-        // You can then send 'data' to your API or further processing
+            try {
+                const response = await axios.post(
+                    `${process.env.NEXT_PUBLIC_API_ENDPOINT}/bookings`,
+                    payload, // This is the request body
+                    { // This is where headers should be specified
+                        headers: {
+                            'x-user-id': credentials?.userId,
+                            'x-session-id': credentials?.sessionId
+                        }
+                    }
+                );
+
+                const axiosData = response.data;
+                console.log("res:", axiosData);
+                setSubmitLoading(false)
+                // Success alert and redirection
+                alert("จองสำเร็จ!");
+                window.location.href = '/meeting-rooms'; // Redirect to meeting rooms
+
+            } catch (error) {
+                console.error("Error creating booking:", error);
+                alert('มีข้อผิดผลาด กรุณาลองใหม่อีกครั้ง')
+                setSubmitLoading(false)
+                // // Display an error alert based on the error response
+                // if (error.response) {
+                //     alert(`Error: ${error.response.data.message || "Something went wrong!"}`);
+                // } else {
+                //     alert("Network error: Unable to connect to the server.");
+                // }
+            }
+        }
+
+        createBooking();
     };
 
 
@@ -729,21 +778,23 @@ export default function Page() {
                                 </select>
                             </div>
                             <div className="h-auto">
-                                {L4 ? (
-                                    <div className="flex items-center justify-center">
-                                        <Spinner size="small" />
-                                    </div>
-                                ) : (
-                                    <Calendar
-                                        toolbar={false}
-                                        defaultView="day"
-                                        date={selectedDate}
-                                        min={min}
-                                        max={max}
-                                        events={events}
-                                        step={step}
-                                        timeslots={timeslot}
-                                    />
+                                {!selectedRoom || !selectedDate ? null : (
+                                    L4 ? (
+                                        <div className="flex items-center justify-center">
+                                            <Spinner size="small" />
+                                        </div>
+                                    ) : (
+                                        <Calendar
+                                            toolbar={false}
+                                            defaultView="day"
+                                            date={selectedDate}
+                                            min={min}
+                                            max={max}
+                                            events={events}
+                                            step={step}
+                                            timeslots={timeslot}
+                                        />
+                                    )
                                 )}
                             </div>
                         </CardContent>
@@ -935,10 +986,13 @@ export default function Page() {
                                             <DialogClose asChild>
                                                 <Button variant="secondary" className='w-full'>ย้อนกลับ</Button>
                                             </DialogClose>
-                                            <Button
+                                            <LoadingButton
+                                                loading={submitLoading}
                                                 className='w-full'
                                                 onClick={() => onSubmit()}
-                                            >ยืนยัน</Button>
+                                            >
+                                                ยืนยัน
+                                            </LoadingButton>
                                         </div>
                                     </DialogDescription>
                                 </DialogHeader>
@@ -946,6 +1000,7 @@ export default function Page() {
                         </Dialog>
                     </div>
                 </div>
+
             </ScrollArea>
         </>
     );

@@ -2,6 +2,7 @@
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { LoadingButton } from '@/components/ui/loading-button';
 import { sendOtp } from '@/lib/AppWrite';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -25,11 +26,11 @@ export default function Page() {
       const result = await sendOtp(userId, email);
       console.log('sendOtp result:', result);
 
-      // Stop button loading state
-      setButtonLoading(false);
-
       // Redirect to /login/verify with the userId and email in the query parameters
       router.push(`/login/verify?userId=${result.userId}&email=${encodeURIComponent(email)}`);
+
+      // Stop button loading state
+      setButtonLoading(false);
     } catch (error) {
       console.error(error);
       setButtonLoading(false);
@@ -64,9 +65,9 @@ export default function Page() {
               <p className="mt-2 text-sm text-red-600">{errors.email.message}</p>
             )}
           </div>
-          <Button type="submit" className="w-full" disabled={buttonLoading}>
-            {buttonLoading ? 'กำลังโหลด...' : 'เข้าสู่ระบบ'}
-          </Button>
+          <LoadingButton loading={buttonLoading} type="submit" className="w-full" >
+            เข้าสู่ระบบ
+          </LoadingButton>
         </form>
       </div>
     </div>

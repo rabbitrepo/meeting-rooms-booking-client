@@ -10,6 +10,7 @@ const nextConfig = {
         // !! WARN !!
         ignoreBuildErrors: true,
     },
+    reactStrictMode: false,
     eslint: { ignoreDuringBuilds: true, },
 };
 

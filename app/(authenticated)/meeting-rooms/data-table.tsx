@@ -68,7 +68,7 @@ export function DataTable<TData, TValue>({
           ) : (
             <TableRow>
               <TableCell colSpan={columns.length} className="text-center py-4">
-                No results.
+                ไม่พบรายการ
               </TableCell>
             </TableRow>
           )}

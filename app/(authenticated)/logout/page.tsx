@@ -1,5 +1,6 @@
 'use client';
 
+import Loading from "@/components/Loading";
 import { logout } from "@/lib/AppWrite";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -22,6 +23,6 @@ export default function Page() {
     }, [router]);
 
     return (
-        <div className="flex justify-center items-center h-screen">กำลังโหลด...</div>
+        <Loading />
     );
 }
